@@ -59,6 +59,20 @@ Final audit result: `ok: true`, `finding_count: 0`.
 
 Important caveat: existing cron runtime model choices were not bulk rewritten; the fleet-wide change was metadata plus auditability. The automatic prevention for new work is the guarded creation path and daily audit.
 
+## Correction - Preserve Runtime Models
+
+At 2026-07-06 23:15 ET, Ben clarified that fallback routing must not overrule intended runtime models. Fallbacks are reliability escape hatches for quota, auth, timeout, or provider outages, not permission to silently change the normal primary/runtime model.
+
+Follow-up repair:
+
+- Removed the `model` block previously added to `codex-thread`; the ACP/Codex runtime remains unmodified.
+- Added top-level `models.providers.ollama` entries for local Qwen models so OpenClaw can resolve the local fallback catalog.
+- Built `openclaw-sandbox:bookworm-slim` from the official OpenClaw npm-install docs so local fallback agents can run sandboxed.
+- Verified `local-llm` live with `openclaw agent --agent local-llm --message 'Reply exactly LOCAL_OK.' --json --timeout 120`; it returned `LOCAL_OK` via `ollama/qwen3-coder:30b`.
+- Hardened `ops/model_fallback_audit.py` to fail if the local Ollama catalog, installed Qwen models, or sandbox image disappear.
+
+Final corrected rule: preserve the intended primary/runtime model; always keep a reachable local/Ollama fallback route for cap exhaustion.
+
 ## Repair Order
 
 1. Fix CLI recovery first so shell/cron repair remains available even when chat surfaces are capped.
