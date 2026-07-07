@@ -68,7 +68,9 @@ Follow-up repair:
 - Removed the `model` block previously added to `codex-thread`; the ACP/Codex runtime remains unmodified.
 - Added top-level `models.providers.ollama` entries for local Qwen models so OpenClaw can resolve the local fallback catalog.
 - Built `openclaw-sandbox:bookworm-slim` from the official OpenClaw npm-install docs so local fallback agents can run sandboxed.
-- Verified `local-llm` live with `openclaw agent --agent local-llm --message 'Reply exactly LOCAL_OK.' --json --timeout 120`; it returned `LOCAL_OK` via `ollama/qwen3-coder:30b`.
+- Initial `local-llm` live smoke with `ollama/qwen3-coder:30b` succeeded once, but repeat testing showed the 30B model is too slow to be the default emergency fallback under normal agent timeouts.
+- Corrected `local-llm` to use `ollama/qwen3:8b` primary, with `qwen3:14b` and `qwen3-coder:30b` behind it, plus lean bootstrap settings.
+- Verified `local-llm` live with `openclaw agent --agent local-llm --message 'Reply exactly LOCAL_OK.' --json --timeout 90`; it returned `LOCAL_OK` via `ollama/qwen3:8b` in about 60 seconds.
 - Hardened `ops/model_fallback_audit.py` to fail if the local Ollama catalog, installed Qwen models, or sandbox image disappear.
 
 Final corrected rule: preserve the intended primary/runtime model; always keep a reachable local/Ollama fallback route for cap exhaustion.
