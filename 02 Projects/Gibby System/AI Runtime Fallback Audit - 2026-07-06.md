@@ -1,6 +1,6 @@
 ---
 date: 2026-07-06
-status: active
+status: shipped
 tags:
   - gibby-system
   - model-fallbacks
@@ -31,6 +31,33 @@ The first run on 2026-07-06 returned 4 findings:
 - High: `agents.defaults.imageModel` uses `openai/gpt-image-2` with an empty fallback list.
 - High: `openclaw cron list --json` fails because the CLI rejects `~/.openclaw/openclaw.json` as invalid, which weakens shell-based recovery.
 - Medium: `cron-map.html` has 25 cap-sensitive model rows with no fallback metadata.
+
+## Shipped Repair - 2026-07-06 22:49 ET
+
+Ben clarified that fallback coverage must be automatic as part of creating model-backed work.
+
+Implemented:
+
+- Fixed `~/.openclaw/openclaw.json` so `openclaw config validate` and `openclaw cron list --json` work again. Backup: `~/.openclaw/openclaw.json.bak-20260707-fallbacks`.
+- Added image fallback metadata: `openai/gpt-image-2 -> openai/gpt-image-1`.
+- Added a visible `codex-thread` ladder: `openai/gpt-5.5 -> openai/gpt-5.4-mini -> ollama/qwen3-coder:30b -> anthropic/claude-sonnet-5`.
+- Patched `scripts/codex_bridge.py` so Codex bridge tries fallback Codex models, then falls back to `openclaw agent --agent local-llm`.
+- Added `scripts/openclaw_cron_guard.py`, which blocks cap-sensitive `openclaw cron add` model pins unless a fallback ladder is declared.
+- Added `ops/apply_cron_fallback_metadata.py` and stamped fallback metadata onto 70 existing live cap-sensitive cron descriptions without changing schedules, prompts, or active model choices.
+- Updated `AGENTS.md` so future model-backed cron/agent/job creation uses the guard and reruns the audit.
+
+Verification:
+
+```bash
+openclaw config validate
+python3 scripts/openclaw_cron_guard.py --dry-run -- --name should-block --every 1h --model anthropic/claude-sonnet-5 --message 'test'
+python3 scripts/openclaw_cron_guard.py --dry-run --use-default-fallbacks -- --name should-pass --every 1h --model anthropic/claude-sonnet-5 --message 'test'
+python3 ops/model_fallback_audit.py --json
+```
+
+Final audit result: `ok: true`, `finding_count: 0`.
+
+Important caveat: existing cron runtime model choices were not bulk rewritten; the fleet-wide change was metadata plus auditability. The automatic prevention for new work is the guarded creation path and daily audit.
 
 ## Repair Order
 
